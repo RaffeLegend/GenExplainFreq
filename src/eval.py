@@ -3,8 +3,8 @@ import os
 
 # import matplotlib.pyplot as plt
 import numpy as np
-# import torch
-# import torch.nn as nn
+import torch
+import torch.nn as nn
 
 from utils.config import CONFIGCLASS
 from utils.utils import to_cuda
