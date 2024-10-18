@@ -3,11 +3,11 @@ import os
 import sys
 import time
 import warnings
-# from importlib import import_module
+from importlib import import_module
 
 import numpy as np
-# import torch
-# import torch.nn as nn
+import torch
+import torch.nn as nn
 from PIL import Image
 
 warnings.filterwarnings("ignore", category=UserWarning, module="torch.nn.functional")
