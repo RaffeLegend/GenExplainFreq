@@ -6,7 +6,7 @@ from torch.nn import init
 
 from utils.config import CONFIGCLASS
 from utils.utils import get_network
-from utils.strategy import GradualWarmupScheduler
+from utils.scheduler import GradualWarmupScheduler
 
 
 class BaseModel(nn.Module):
