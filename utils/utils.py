@@ -85,7 +85,7 @@ def get_network(arch: str, isTrain=False, continue_train=False, init_gain=0.02, 
     if "resnet" in arch:
         from models.resnet import ResNet
 
-        resnet = getattr(import_module("networks.resnet"), arch)
+        resnet = getattr(import_module("models.resnet"), arch)
         if isTrain:
             if continue_train:
                 model: ResNet = resnet(num_classes=1)
