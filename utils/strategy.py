@@ -1,8 +1,6 @@
 import numpy as np
 
 from src.container import Trainer
-from torch.optim.lr_scheduler import ReduceLROnPlateau, _LRScheduler
-
 
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""
