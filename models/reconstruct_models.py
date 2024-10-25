@@ -1,6 +1,6 @@
 from PIL import Image
 import torch.nn as nn
-from resnet import resnet50
+from models.resnet import resnet50
 
     
 # Reconstruction branch using ResNet50
