@@ -38,6 +38,8 @@ class Trainer(BaseModel):
             raise ValueError("optim should be [adam, sgd]")
 
         # self.loss_fn = nn.BCEWithLogitsLoss()
+        self.classification = 0
+        self.reconstruction = 0
         self.loss_fn = self.combined_loss()
 
         self.model.to(opt.gpu_ids[0])
