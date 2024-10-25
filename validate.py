@@ -15,7 +15,7 @@ import pickle
 from tqdm import tqdm
 from io import BytesIO
 from copy import deepcopy
-from dataset_paths import DATASET_PATHS
+from datasets_path import DATASET_PATHS
 import random
 import shutil
 from scipy.ndimage.filters import gaussian_filter
