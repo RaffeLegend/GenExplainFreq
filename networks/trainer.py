@@ -13,15 +13,17 @@ class Trainer(BaseModel):
         super(Trainer, self).__init__(opt)
         self.opt = opt  
         self.model = get_model(opt.arch)
-        # torch.nn.init.normal_(self.model.fc.weight.data, 0.0, opt.init_gain)
+        torch.nn.init.normal_(self.model.classification_branch.fc.weight.data, 0.0, opt.init_gain)
 
         if opt.fix_backbone:
             params = []
-            for name, p in self.model.named_parameters():
+            for name, p in self.model.classification_branch.named_parameters():
                 if  name=="fc.weight" or name=="fc.bias": 
                     params.append(p) 
                 else:
                     p.requires_grad = False
+            for name, p in self.model.reconstruction_branch.named_parameters():
+                params.append(p)
         else:
             print("Your backbone is not fixed. Are you sure you want to proceed? If this is a mistake, enable the --fix_backbone command during training and rerun")
             import time 
