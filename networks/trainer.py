@@ -13,7 +13,7 @@ class Trainer(BaseModel):
         super(Trainer, self).__init__(opt)
         self.opt = opt  
         self.model = get_model(opt.arch)
-        torch.nn.init.normal_(self.model.fc.weight.data, 0.0, opt.init_gain)
+        # torch.nn.init.normal_(self.model.fc.weight.data, 0.0, opt.init_gain)
 
         if opt.fix_backbone:
             params = []
