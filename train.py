@@ -1,79 +1,75 @@
-from utils.config import cfg  # isort: split
-
 import os
 import time
-
 from tensorboardX import SummaryWriter
-from tqdm import tqdm
 
-from dataset.datasets import create_dataloader
-from utils.strategy import EarlyStopping
-from src.eval import get_val_cfg, validate
-from src.container import Trainer
-from utils.utils import Logger
+from validate import validate
+from data import create_dataloader
+from utils.earlystop import EarlyStopping
+from networks.trainer import Trainer
+from options.train_options import TrainOptions
+from options.val_options import get_val_opt
 
-if __name__ == "__main__":
-    val_cfg = get_val_cfg(cfg, split="val", copy=True)
-    cfg.dataset_root = os.path.join(cfg.dataset_root, "train")
-    data_loader = create_dataloader(cfg)
-    dataset_size = len(data_loader)
-    print(dataset_size)
+# Entrance
+if __name__ == '__main__':
 
-    log = Logger()
-    log.open(cfg.logs_path, mode="a")
-    log.write("Num of training images = %d\n" % (dataset_size * cfg.batch_size))
-    log.write("Config:\n" + str(cfg.to_dict()) + "\n")
+    # define training options
+    opt = TrainOptions().parse()
 
-    train_writer = SummaryWriter(os.path.join(cfg.exp_dir, "train"))
-    val_writer = SummaryWriter(os.path.join(cfg.exp_dir, "val"))
+    # define validation options
+    val_opt = get_val_opt()
+ 
+    # define training settings: optim, loss, model, learning rate, etc.
+    model = Trainer(opt)
+    
+    # get data
+    data_loader = create_dataloader(opt)
+    val_loader = create_dataloader(val_opt)
 
-    trainer = Trainer(cfg)
-    early_stopping = EarlyStopping(patience=cfg.earlystop_epoch, delta=-0.001, verbose=True)
-    for epoch in range(cfg.nepoch):
-        epoch_start_time = time.time()
-        iter_data_time = time.time()
-        epoch_iter = 0
+    # record the training summary
+    train_writer = SummaryWriter(os.path.join(opt.checkpoints_dir, opt.name, "train"))
+    val_writer = SummaryWriter(os.path.join(opt.checkpoints_dir, opt.name, "val"))
 
-        for data in tqdm(data_loader, dynamic_ncols=True):
-            trainer.total_steps += 1
-            epoch_iter += cfg.batch_size
+    # set early stopping strategy   
+    early_stopping = EarlyStopping(patience=opt.earlystop_epoch, delta=-0.001, verbose=True)
+    start_time = time.time()
+    print ("Length of data loader: %d" %(len(data_loader)))
 
-            trainer.set_input(data)
-            trainer.optimize_parameters()
+    # start to training
+    for epoch in range(opt.niter):
+        
+        for i, data in enumerate(data_loader):
+            model.total_steps += 1
 
-            # if trainer.total_steps % cfg.loss_freq == 0:
-            #     log.write(f"Train loss: {trainer.loss} at step: {trainer.total_steps}\n")
-            train_writer.add_scalar("loss", trainer.loss, trainer.total_steps)
+            model.set_input(data)
+            model.optimize_parameters()
 
-            if trainer.total_steps % cfg.save_latest_freq == 0:
-                log.write(
-                    "saving the latest model %s (epoch %d, model.total_steps %d)\n"
-                    % (cfg.exp_name, epoch, trainer.total_steps)
-                )
-                trainer.save_networks("latest")
+            if model.total_steps % opt.loss_freq == 0:
+                print("Train loss: {} at step: {}".format(model.loss, model.total_steps))
+                train_writer.add_scalar('loss', model.loss, model.total_steps)
+                print("Iter time: ", ((time.time()-start_time)/model.total_steps)  )
 
-        if epoch % cfg.save_epoch_freq == 0:
-            log.write("saving the model at the end of epoch %d, iters %d\n" % (epoch, trainer.total_steps))
-            trainer.save_networks("latest")
-            trainer.save_networks(epoch)
+            if model.total_steps in [10,30,50,100,1000,5000,10000] and False: # save models at these iters 
+                model.save_networks('model_iters_%s.pth' % model.total_steps)
+
+        if epoch % opt.save_epoch_freq == 0:
+            print('saving the model at the end of epoch %d' % (epoch))
+            model.save_networks( 'model_epoch_best.pth' )
+            model.save_networks( 'model_epoch_%s.pth' % epoch )
 
         # Validation
-        trainer.eval()
-        val_results = validate(trainer.model, val_cfg)
-        val_writer.add_scalar("AP", val_results["AP"], trainer.total_steps)
-        val_writer.add_scalar("ACC", val_results["ACC"], trainer.total_steps)
-        log.write(f"(Val @ epoch {epoch}) AP: {val_results['AP']}; ACC: {val_results['ACC']}\n")
+        model.eval()
+        ap, r_acc, f_acc, acc = validate(model.model, val_loader)
+        val_writer.add_scalar('accuracy', acc, model.total_steps)
+        val_writer.add_scalar('ap', ap, model.total_steps)
+        print("(Val @ epoch {}) acc: {}; ap: {}".format(epoch, acc, ap))
 
-        if cfg.earlystop:
-            early_stopping(val_results["ACC"], trainer)
-            if early_stopping.early_stop:
-                if trainer.adjust_learning_rate():
-                    log.write("Learning rate dropped by 10, continue training...\n")
-                    early_stopping = EarlyStopping(patience=cfg.earlystop_epoch, delta=-0.002, verbose=True)
-                else:
-                    log.write("Early stopping.\n")
-                    break
-        if cfg.warmup:
-            # print(trainer.scheduler.get_lr()[0])
-            trainer.scheduler.step()
-        trainer.train()
+        early_stopping(acc, model)
+        if early_stopping.early_stop:
+            cont_train = model.adjust_learning_rate()
+            if cont_train:
+                print("Learning rate dropped by 10, continue training...")
+                early_stopping = EarlyStopping(patience=opt.earlystop_epoch, delta=-0.002, verbose=True)
+            else:
+                print("Early stopping.")
+                break
+        model.train()
