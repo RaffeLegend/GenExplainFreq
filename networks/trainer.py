@@ -38,7 +38,7 @@ class Trainer(BaseModel):
             raise ValueError("optim should be [adam, sgd]")
 
         # self.loss_fn = nn.BCEWithLogitsLoss()
-        # self.loss_fn = self.combined_loss()
+        self.loss_fn = self.combined_loss()
 
         self.model.to(opt.gpu_ids[0])
 
@@ -67,7 +67,7 @@ class Trainer(BaseModel):
         return self.combined_loss()
         return self.loss_fn(self.output.squeeze(1), self.label)
     
-    def combined_loss(self, classification_logits, class_targets, reconstructed_image, image_targets):
+    def combined_loss(self):
     # Classification loss (CrossEntropyLoss)
         classification_loss = nn.CrossEntropyLoss()(self.classification, self.label)
     
@@ -80,7 +80,7 @@ class Trainer(BaseModel):
 
     def optimize_parameters(self):
         self.forward()
-        self.loss = self.loss_fn(self.output.squeeze(1), self.label) 
+        self.loss = self.loss_fn() 
         self.optimizer.zero_grad()
         self.loss.backward()
         self.optimizer.step()
