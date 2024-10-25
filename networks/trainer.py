@@ -38,9 +38,7 @@ class Trainer(BaseModel):
             raise ValueError("optim should be [adam, sgd]")
 
         # self.loss_fn = nn.BCEWithLogitsLoss()
-        self.classification = 0
-        self.reconstruction = 0
-        self.loss_fn = self.combined_loss()
+        # self.loss_fn = self.combined_loss()
 
         self.model.to(opt.gpu_ids[0])
 
@@ -82,7 +80,7 @@ class Trainer(BaseModel):
 
     def optimize_parameters(self):
         self.forward()
-        self.loss = self.loss_fn() 
+        self.loss = self.combined_loss()
         self.optimizer.zero_grad()
         self.loss.backward()
         self.optimizer.step()
