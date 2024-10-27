@@ -1,0 +1,3 @@
+[submodule "SegNeXt"]
+	path = SegNeXt
+	url = https://github.com/RaffeLegend/SegNeXt.git
