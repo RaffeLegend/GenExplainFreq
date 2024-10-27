@@ -1,7 +1,10 @@
 from .clip_models import CLIPModel
 from .imagenet_models import ImagenetModel
-from .reconstruct_models import ReconstructionModel
+from .reconstruct_models import Reconstruction
 import torch.nn as nn
+
+from .resnet_model import ResModel
+from .classification_head import Classification
 
 
 VALID_NAMES = [
@@ -49,16 +52,18 @@ class DualBranchNetwork(nn.Module):
         super(DualBranchNetwork, self).__init__()
         
         # Initialize the classification branch (CLIP)
-        self.classification_branch = CLIPModel(name[5:])
-        
+        # self.classification_branch = CLIPModel(name[5:])
+        self.backbone = nn.Sequential(*list(ResModel.children())[:-2])
         # Initialize the reconstruction branch (ResNet50)
-        self.reconstruction_branch = ReconstructionModel()
+        self.reconstruction_branch = nn.Sequential(*list(Reconstruction.children())[:-2])
+        self.classification_branch = Classification()
     
     def forward(self, x):
         # Branch 1: Classification (CLIP)
-        classification_logits = self.classification_branch(x)
+        feature = self.backbone(x)
+        classification_logits = self.classification_branch(feature)
         
         # Branch 2: Image reconstruction (ResNet50)
-        reconstructed_image = self.reconstruction_branch(x)
+        reconstructed_image = self.reconstruction_branch(feature)
         
         return classification_logits, reconstructed_image
